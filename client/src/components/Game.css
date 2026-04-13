@@ -1,0 +1,139 @@
+.game {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+.game h1 {
+  color: white;
+  margin-bottom: 20px;
+  font-size: 2.5rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.room-input {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.room-input input {
+  padding: 12px 20px;
+  font-size: 16px;
+  border: 2px solid #667eea;
+  border-radius: 8px;
+  outline: none;
+  background: white;
+  color: #333;
+}
+
+.room-input button {
+  padding: 12px 24px;
+  font-size: 16px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.room-input button:hover {
+  background: #45a049;
+}
+
+.game-info {
+  background: white;
+  padding: 15px 25px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.game-info p {
+  margin: 5px 0;
+  font-size: 14px;
+  color: #000;
+  font-weight: 500;
+}
+
+.game-status {
+  margin: 15px 0;
+  font-size: 1.2rem;
+  color: white;
+  font-weight: bold;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: #fff;
+  padding: 10px;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.board-row {
+  display: flex;
+  gap: 5px;
+}
+
+.square {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(145deg, #f0f0f0, #e6e6e6);
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  font-size: 2.5rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  color: #333;
+}
+
+.square:hover:not(:disabled) {
+  background: linear-gradient(145deg, #e6e6e6, #d9d9d9);
+  transform: scale(1.05);
+}
+
+.square:disabled {
+  cursor: not-allowed;
+}
+
+.square:not(:disabled):hover {
+  background: linear-gradient(145deg, #d4edda, #c3e6cb);
+}
+
+.reset-button {
+  margin-top: 20px;
+  padding: 12px 30px;
+  font-size: 16px;
+  background: #ff6b6b;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s;
+  font-weight: bold;
+}
+
+.reset-button:hover {
+  background: #ff5252;
+}
+
+@media (max-width: 400px) {
+  .square {
+    width: 60px;
+    height: 60px;
+    font-size: 2rem;
+  }
+}
