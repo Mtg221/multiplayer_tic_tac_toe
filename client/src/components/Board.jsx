@@ -1,31 +1,17 @@
 import Square from './Square';
 
-function Board({ squares, onClick, disabled }) {
-  const renderSquare = (i) => (
-    <Square
-      value={squares[i]}
-      onSquareClick={() => onClick(i)}
-      disabled={disabled}
-    />
-  );
-
+function Board({ squares, onClick, disabled, winningLine }) {
   return (
     <div className="board">
-      <div className="board-row">
-        {renderSquare(0)}
-        {renderSquare(1)}
-        {renderSquare(2)}
-      </div>
-      <div className="board-row">
-        {renderSquare(3)}
-        {renderSquare(4)}
-        {renderSquare(5)}
-      </div>
-      <div className="board-row">
-        {renderSquare(6)}
-        {renderSquare(7)}
-        {renderSquare(8)}
-      </div>
+      {squares.map((val, i) => (
+        <Square
+          key={i}
+          value={val}
+          onSquareClick={() => onClick(i)}
+          disabled={disabled}
+          isWinning={winningLine?.includes(i)}
+        />
+      ))}
     </div>
   );
 }
