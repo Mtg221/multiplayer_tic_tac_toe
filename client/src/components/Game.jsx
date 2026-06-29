@@ -14,10 +14,16 @@ function Game() {
   const [currentPlayer, setCurrentPlayer] = useState('X');
   const [winner, setWinner] = useState(null);
 
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
   useEffect(() => {
-    socketRef.current = io(BACKEND_URL);
+    // En dev : string vide → proxy Vite vers localhost:4000 (pas de CORS)
+    // En prod : VITE_BACKEND_URL doit pointer vers le serveur Render
+    socketRef.current = io(BACKEND_URL || undefined);
+
+    socketRef.current.on('room_full', () => {
+      alert('Cette room est complète (max 2 joueurs).');
+    });
 
     socketRef.current.on('player_symbol', (symbol) => {
       console.log('Received player_symbol:', symbol);
