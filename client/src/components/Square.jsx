@@ -1,11 +1,13 @@
-function Square({ value, onSquareClick, disabled }) {
+function Square({ value, onSquareClick, disabled, isWinning }) {
   return (
     <button
-      className="square"
+      className={`square${value ? ' filled' : ''}${isWinning ? ' winning' : ''}`}
       onClick={onSquareClick}
-      disabled={disabled || value !== null}
+      disabled={disabled || !!value}
     >
-      {value}
+      {value && (
+        <span className={`symbol symbol-${value.toLowerCase()}`}>{value}</span>
+      )}
     </button>
   );
 }
