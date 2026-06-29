@@ -1,153 +1,155 @@
 const express = require('express');
-const http = require('http');
+const http    = require('http');
 const { Server } = require('socket.io');
-const cors = require('cors');
+const cors    = require('cors');
 
 const app = express();
-app.use(cors());
+
+const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
+  .split(',').map(s => s.trim());
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    cb(new Error('CORS non autorisé'));
+  },
+}));
+
+app.get('/', (req, res) => res.json({ message: 'Tic-Tac-Toe server running' }));
 
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: {
-    origin: process.env.CLIENT_URL ||'http://localhost:5173',
-    methods: ['GET', 'POST'],
-  },
+  cors: { origin: allowedOrigins, methods: ['GET', 'POST'] },
 });
 
 const rooms = {};
 const playerRooms = {};
 
-io.on('connection', (socket) => {
-  console.log(`User connected: ${socket.id}`);
+// Validation serveur : vérifie si le coup est légal
+function isValidMove(room, index, symbol) {
+  const playerIndex = room.players.indexOf(symbol === 'X' ? room.players[0] : room.players[1]);
+  const isPlayerTurn = (symbol === 'X') === room.xIsNext;
+  return (
+    room.squares[index] === null &&
+    isPlayerTurn &&
+    index >= 0 && index < 9
+  );
+}
 
+// Détection de victoire côté serveur
+function checkWinner(squares) {
+  const lines = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6],
+  ];
+  for (const [a,b,c] of lines) {
+    if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c])
+      return squares[a];
+  }
+  return null;
+}
+
+io.on('connection', (socket) => {
   socket.on('join_room', (roomID) => {
-    console.log(`User ${socket.id} attempting to join room: ${roomID}`);
-    
+    if (!roomID || typeof roomID !== 'string' || roomID.length > 50) return;
+
     socket.join(roomID);
 
     if (!rooms[roomID]) {
-      rooms[roomID] = {
-        players: [],
-        squares: Array(9).fill(null),
-        xIsNext: true,
-      };
-      console.log(`Created new room: ${roomID}`);
+      rooms[roomID] = { players: [], squares: Array(9).fill(null), xIsNext: true };
     }
 
     const room = rooms[roomID];
-    
+
+    // Maximum 2 joueurs par room
+    if (room.players.length >= 2 && !room.players.includes(socket.id)) {
+      socket.emit('room_full');
+      return;
+    }
+
     let playerSymbol;
-    const existingPlayerIndex = room.players.indexOf(socket.id);
-    
-    if (existingPlayerIndex !== -1) {
-      playerSymbol = existingPlayerIndex === 0 ? 'X' : 'O';
-      console.log(`Player ${socket.id} reconnected to room ${roomID} as ${playerSymbol}`);
+    const existingIndex = room.players.indexOf(socket.id);
+    if (existingIndex !== -1) {
+      playerSymbol = existingIndex === 0 ? 'X' : 'O';
     } else {
       playerSymbol = room.players.length === 0 ? 'X' : 'O';
       room.players.push(socket.id);
-      console.log(`Player ${socket.id} joined room ${roomID} as ${playerSymbol}`);
     }
 
     playerRooms[socket.id] = roomID;
 
     socket.emit('player_symbol', playerSymbol);
-    socket.emit('game_state', {
-      squares: room.squares,
-      xIsNext: room.xIsNext,
-      currentPlayer: playerSymbol,
-    });
-
-    io.to(roomID).emit('room_update', {
-      players: room.players,
-      currentPlayer: room.xIsNext ? 'X' : 'O',
-    });
-
-    console.log(`Room ${roomID} now has players:`, room.players);
+    socket.emit('game_state', { squares: room.squares, xIsNext: room.xIsNext });
+    io.to(roomID).emit('room_update', { players: room.players.length, currentPlayer: room.xIsNext ? 'X' : 'O' });
   });
 
   socket.on('make_move', ({ roomID, index, symbol }) => {
-    console.log(`make_move received:`, { roomID, index, symbol, socketId: socket.id });
-    
+    if (!roomID || typeof index !== 'number' || !['X','O'].includes(symbol)) return;
+
     const room = rooms[roomID];
-    if (!room) {
-      console.log(`Room ${roomID} not found`);
-      return;
-    }
-    
-    if (!room.squares[index]) {
-      console.log(`Square ${index} is empty, updating`);
-      room.squares[index] = symbol;
-      room.xIsNext = !room.xIsNext;
+    if (!room) return;
 
-      io.to(roomID).emit('move_made', {
-        index,
-        symbol,
-        xIsNext: room.xIsNext,
-        currentPlayer: room.xIsNext ? 'X' : 'O',
-      });
+    // Vérifier que le socket est bien le joueur attendu
+    const playerIndex = room.players.indexOf(socket.id);
+    if (playerIndex === -1) return;
+    const expectedSymbol = playerIndex === 0 ? 'X' : 'O';
+    if (symbol !== expectedSymbol) return;
 
-      io.to(roomID).emit('room_update', {
-        players: room.players,
-        currentPlayer: room.xIsNext ? 'X' : 'O',
-      });
+    if (!isValidMove(room, index, symbol)) return;
 
-      console.log(`Move made in room ${roomID}: square ${index} = ${symbol}`);
-    } else {
-      console.log(`Square ${index} is already filled`);
-    }
+    room.squares[index] = symbol;
+    room.xIsNext = !room.xIsNext;
+
+    const winner = checkWinner(room.squares);
+    const isDraw = !winner && room.squares.every(s => s !== null);
+
+    io.to(roomID).emit('move_made', {
+      index, symbol, xIsNext: room.xIsNext,
+      winner: winner || null,
+      isDraw,
+    });
+
+    io.to(roomID).emit('room_update', {
+      players: room.players.length,
+      currentPlayer: room.xIsNext ? 'X' : 'O',
+    });
   });
 
   socket.on('reset_game', (roomID) => {
     const room = rooms[roomID];
-    if (room) {
-      room.squares = Array(9).fill(null);
-      room.xIsNext = true;
+    if (!room) return;
 
-      io.to(roomID).emit('game_reset', {
-        squares: room.squares,
-        xIsNext: true,
-      });
+    // Seul un joueur de la room peut reset
+    if (!room.players.includes(socket.id)) return;
 
-      io.to(roomID).emit('room_update', {
-        players: room.players,
-        currentPlayer: 'X',
-      });
+    room.squares = Array(9).fill(null);
+    room.xIsNext = true;
 
-      console.log(`Game reset in room ${roomID}`);
-    }
+    io.to(roomID).emit('game_reset', { squares: room.squares, xIsNext: true });
+    io.to(roomID).emit('room_update', { players: room.players.length, currentPlayer: 'X' });
   });
 
   socket.on('disconnect', () => {
-    console.log(`User disconnected: ${socket.id}`);
-    
     const roomID = playerRooms[socket.id];
     if (roomID && rooms[roomID]) {
       const room = rooms[roomID];
-      const playerIndex = room.players.indexOf(socket.id);
-      
-      if (playerIndex !== -1) {
-        room.players.splice(playerIndex, 1);
-        
-        io.to(roomID).emit('room_update', {
-          players: room.players,
-          currentPlayer: room.xIsNext ? 'X' : 'O',
-          playerLeft: socket.id,
-        });
+      const idx  = room.players.indexOf(socket.id);
+      if (idx !== -1) room.players.splice(idx, 1);
 
-        if (room.players.length === 0) {
-          delete rooms[roomID];
-          console.log(`Room ${roomID} deleted (no players)`);
-        } else {
-          console.log(`Player left room ${roomID}, remaining players:`, room.players);
-        }
+      if (room.players.length === 0) {
+        delete rooms[roomID];
+      } else {
+        io.to(roomID).emit('room_update', {
+          players: room.players.length,
+          currentPlayer: room.xIsNext ? 'X' : 'O',
+          playerLeft: true,
+        });
       }
     }
-    
     delete playerRooms[socket.id];
   });
 });
 
-const PORT = 4000;
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 4000;
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
