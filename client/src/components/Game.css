@@ -85,9 +85,11 @@
 .input-row {
   display: flex;
   gap: 10px;
+  align-items: stretch;
 }
 .room-input {
   flex: 1;
+  min-width: 0;
   padding: 12px 16px;
   background: #0f0e17;
   border: 1px solid #2d2b3d;
@@ -113,6 +115,8 @@
 .divider::before,.divider::after { content:''; flex:1; height:1px; background:#2d2b3d; }
 
 /* ─── Buttons ────────────────────────────────────────────── */
+.input-row .btn { flex-shrink: 0; }
+
 .btn {
   padding: 12px 24px;
   border-radius: 10px;
