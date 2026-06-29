@@ -14,12 +14,12 @@ function Game() {
   const [currentPlayer, setCurrentPlayer] = useState('X');
   const [winner, setWinner] = useState(null);
 
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://multiplayer-tic-tac-toe-zjfg.onrender.com';
 
   useEffect(() => {
     // En dev : string vide → proxy Vite vers localhost:4000 (pas de CORS)
     // En prod : VITE_BACKEND_URL doit pointer vers le serveur Render
-    socketRef.current = io(BACKEND_URL || undefined);
+    socketRef.current = io(BACKEND_URL);
 
     socketRef.current.on('room_full', () => {
       alert('Cette room est complète (max 2 joueurs).');
