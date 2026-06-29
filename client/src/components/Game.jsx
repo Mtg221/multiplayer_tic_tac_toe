@@ -37,6 +37,7 @@ export default function Game() {
   const socketRef = useRef(null);
   const [roomInput, setRoomInput]   = useState('');
   const [joinedRoom, setJoinedRoom] = useState('');
+  const [screen, setScreen]         = useState('lobby'); // 'lobby' | 'joining' | 'game'
   const [squares, setSquares]       = useState(Array(9).fill(null));
   const [xIsNext, setXIsNext]       = useState(true);
   const [playerSymbol, setSymbol]   = useState(null);
@@ -61,10 +62,15 @@ export default function Game() {
     socket.on('connect',    () => setConnected(true));
     socket.on('disconnect', () => setConnected(false));
 
-    socket.on('room_full', () => addToast('Room complète (max 2 joueurs)', 'error'));
+    socket.on('room_full', () => {
+      addToast('Room complète (max 2 joueurs)', 'error');
+      setScreen('lobby');
+      setJoinedRoom('');
+    });
 
     socket.on('player_symbol', symbol => {
       setSymbol(symbol);
+      setScreen('game');
       addToast(`Tu joues les ${symbol}`, 'info');
     });
 
@@ -110,6 +116,7 @@ export default function Game() {
   const handleJoin = () => {
     const id = roomInput.trim().toUpperCase();
     if (!id || !socketRef.current) return;
+    setScreen('joining');
     socketRef.current.emit('join_room', id);
     setJoinedRoom(id);
   };
@@ -134,7 +141,27 @@ export default function Game() {
     ((xIsNext && playerSymbol === 'X') || (!xIsNext && playerSymbol === 'O'));
 
   // ── Lobby ──────────────────────────────────────────────────
-  if (!joinedRoom) {
+  if (screen !== 'game') {
+    if (screen === 'joining') {
+      return (
+        <div className="app">
+          <Toast toasts={toasts} />
+          <div className="lobby">
+            <div className="logo-wrap">
+              <span className="logo-x">X</span>
+              <span className="logo-o">O</span>
+            </div>
+            <div className="lobby-card" style={{alignItems:'center',gap:'24px'}}>
+              <div className="conn-badge">
+                <span className="dots"><span/><span/><span/></span>
+                Connexion à la room <strong style={{color:'#fff',letterSpacing:'2px'}}>{roomInput}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="app">
         <Toast toasts={toasts} />
@@ -255,7 +282,7 @@ export default function Game() {
               Rejouer
             </button>
           )}
-          <button className="btn btn-ghost" onClick={() => { setJoinedRoom(''); setSquares(Array(9).fill(null)); setWinInfo(null); setDraw(false); setSymbol(null); setCount(0); setScores({ X:0, O:0, draw:0 }); }}>
+          <button className="btn btn-ghost" onClick={() => { setScreen('lobby'); setJoinedRoom(''); setRoomInput(''); setSquares(Array(9).fill(null)); setWinInfo(null); setDraw(false); setSymbol(null); setCount(0); setScores({ X:0, O:0, draw:0 }); }}>
             Quitter
           </button>
         </div>
