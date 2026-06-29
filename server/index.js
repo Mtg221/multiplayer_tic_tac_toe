@@ -5,8 +5,12 @@ const cors    = require('cors');
 
 const app = express();
 
-const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
-  .split(',').map(s => s.trim());
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://multiplayer-tic-tac-toe-delta.vercel.app',
+  ...(process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',').map(s => s.trim()) : []),
+];
 
 app.use(cors({
   origin: (origin, cb) => {
